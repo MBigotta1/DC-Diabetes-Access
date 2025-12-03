@@ -176,9 +176,9 @@
                                 Medicine
                             </label>
                             <select id="medicine" name="medicine" class="form-select">
-                                <option value="">All medicines</option>
+                                <option value="" data-base-label="All medicines">All medicines</option>
                                 {% for med in medicines %}
-                                    <option value="{{ med }}"
+                                    <option value="{{ med }}" data-base-label="{{ med }}"
                                         {% if selected_medicine == med %}selected{% endif %}>
                                         {{ med }}
                                     </option>
@@ -192,9 +192,9 @@
                                 Insurance
                             </label>
                             <select id="insurance" name="insurance" class="form-select">
-                                <option value="">All insurance plans</option>
+                                <option value="" data-base-label="All insurance plans">All insurance plans</option>
                                 {% for ins in insurances %}
-                                    <option value="{{ ins }}"
+                                    <option value="{{ ins }}" data-base-label="{{ ins }}"
                                         {% if selected_insurance == ins %}selected{% endif %}>
                                         {{ ins }}
                                     </option>
@@ -440,100 +440,83 @@
         }
     })();
 
-    var medicineBaseLabels = {};
-    var insuranceBaseLabels = {};
-
-    function resetMedicineLabels() {
-        var medSelect = document.getElementById("medicine");
-        if (!medSelect) return;
-        for (var i = 0; i < medSelect.options.length; i++) {
-            var opt = medSelect.options[i];
-            if (!opt.value) continue;
-            if (medicineBaseLabels[opt.value]) {
-                opt.text = medicineBaseLabels[opt.value];
+    function resetOptionLabels(selectId) {
+        var sel = document.getElementById(selectId);
+        if (!sel) return;
+        for (var i = 0; i < sel.options.length; i++) {
+            var opt = sel.options[i];
+            var base = opt.getAttribute("data-base-label");
+            if (base) {
+                opt.textContent = base;
             }
         }
     }
 
-    function resetInsuranceLabels() {
-        var insSelect = document.getElementById("insurance");
-        if (!insSelect) return;
-        for (var i = 0; i < insSelect.options.length; i++) {
-            var opt = insSelect.options[i];
-            if (!opt.value) continue;
-            if (insuranceBaseLabels[opt.value]) {
-                opt.text = insuranceBaseLabels[opt.value];
-            }
-        }
-    }
-
-    // Annotate insurances when a medicine is selected
-    function annotateInsuranceOptions(selectedMed) {
+    function annotateInsuranceForMedicine(selectedMed) {
         var insSelect = document.getElementById("insurance");
         var help = document.getElementById("insuranceHelp");
         if (!insSelect) return;
 
-        resetInsuranceLabels();
+        resetOptionLabels("insurance");
         if (help) help.textContent = "";
 
         if (!selectedMed) return;
 
         for (var i = 0; i < insSelect.options.length; i++) {
             var opt = insSelect.options[i];
-            if (!opt.value) continue;
+            if (!opt.value) continue; // skip "All insurance plans"
+            var base = opt.getAttribute("data-base-label") || opt.value;
 
-            var base = insuranceBaseLabels[opt.value] || opt.value;
-            var hasCoverage = false;
-
+            var yes = false;
             if (coverageMap[selectedMed] && coverageMap[selectedMed][opt.value]) {
                 var cov = coverageMap[selectedMed][opt.value];
                 if (cov && cov.covered === "Yes") {
-                    hasCoverage = true;
+                    yes = true;
                 }
             }
-
-            opt.text = base + (hasCoverage ? " (Yes)" : " (No)");
+            opt.textContent = base + (yes ? " (Yes)" : " (No)");
         }
 
         if (help) {
-            help.textContent = "Each insurance now shows (Yes) or (No) based on coverage for " + selectedMed + " in our data.";
+            help.textContent =
+                "Each insurance now shows (Yes) or (No) based on coverage for " +
+                selectedMed + " in our data.";
         }
     }
 
-    // Annotate medicines when an insurance is selected
-    function annotateMedicineOptions(selectedIns) {
+    function annotateMedicineForInsurance(selectedIns) {
         var medSelect = document.getElementById("medicine");
         var help = document.getElementById("medicineHelp");
         if (!medSelect) return;
 
-        resetMedicineLabels();
+        resetOptionLabels("medicine");
         if (help) help.textContent = "";
 
         if (!selectedIns) return;
 
         for (var i = 0; i < medSelect.options.length; i++) {
             var opt = medSelect.options[i];
-            if (!opt.value) continue;
+            if (!opt.value) continue; // skip "All medicines"
+            var base = opt.getAttribute("data-base-label") || opt.value;
 
-            var base = medicineBaseLabels[opt.value] || opt.value;
-            var hasCoverage = false;
-
+            var yes = false;
             if (coverageMap[opt.value] && coverageMap[opt.value][selectedIns]) {
                 var cov = coverageMap[opt.value][selectedIns];
                 if (cov && cov.covered === "Yes") {
-                    hasCoverage = true;
+                    yes = true;
                 }
             }
-
-            opt.text = base + (hasCoverage ? " (Yes)" : " (No)");
+            opt.textContent = base + (yes ? " (Yes)" : " (No)");
         }
 
         if (help) {
-            help.textContent = "Each medicine now shows (Yes) or (No) based on coverage under " + selectedIns + " in our data.";
+            help.textContent =
+                "Each medicine now shows (Yes) or (No) based on coverage under " +
+                selectedIns + " in our data.";
         }
     }
 
-    // --- client-side sorting for Explore options table ---
+    // table sorting
     function sortPairingsTable() {
         var tbody = document.getElementById("pairingsBody");
         if (!tbody) return;
@@ -543,7 +526,6 @@
 
         var metric = metricSelect ? metricSelect.value : "annual";
         var order = orderSelect ? orderSelect.value : "asc";
-
         var key = metric === "monthly" ? "monthly" : "annual";
 
         var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
@@ -571,46 +553,26 @@
         var metricSelect = document.getElementById("sortMetric");
         var orderSelect = document.getElementById("sortOrder");
 
-        // Save base labels for all options
-        if (medSelect) {
-            for (var i = 0; i < medSelect.options.length; i++) {
-                var opt = medSelect.options[i];
-                if (!opt.value) continue;
-                medicineBaseLabels[opt.value] = opt.text;
-            }
-        }
-
-        if (insSelect) {
-            for (var j = 0; j < insSelect.options.length; j++) {
-                var opt2 = insSelect.options[j];
-                if (!opt2.value) continue;
-                insuranceBaseLabels[opt2.value] = opt2.text;
-            }
-        }
-
-        // When user changes medicine: annotate insurances
         if (medSelect) {
             medSelect.addEventListener("change", function () {
-                annotateInsuranceOptions(this.value);
+                annotateInsuranceForMedicine(this.value);
             });
         }
 
-        // When user changes insurance: annotate medicines
         if (insSelect) {
             insSelect.addEventListener("change", function () {
-                annotateMedicineOptions(this.value);
+                annotateMedicineForInsurance(this.value);
             });
         }
 
-        // If page loaded with selections from a POST, re-annotate
+        // If page loaded with selections, re-annotate dropdowns
         if (medSelect && medSelect.value) {
-            annotateInsuranceOptions(medSelect.value);
+            annotateInsuranceForMedicine(medSelect.value);
         }
         if (insSelect && insSelect.value) {
-            annotateMedicineOptions(insSelect.value);
+            annotateMedicineForInsurance(insSelect.value);
         }
 
-        // Sorting controls
         if (metricSelect) {
             metricSelect.addEventListener("change", sortPairingsTable);
         }
@@ -618,7 +580,6 @@
             orderSelect.addEventListener("change", sortPairingsTable);
         }
 
-        // initial sort (cheapest annual at top)
         sortPairingsTable();
     });
 </script>
