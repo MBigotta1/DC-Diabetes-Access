@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Diabetes Medicine & Insurance Cost Tool</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8">
+    <title>Diabetes Medicine & Insurance Tool</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Bootstrap -->
     <link
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    />
+    >
 
     <style>
         body {
@@ -97,11 +97,6 @@
             color: #b02a37;
         }
 
-        .coverage-partial {
-            background: #fff3cd;
-            color: #856404;
-        }
-
         .row-good-coverage {
             background-color: #ecfdf3;
         }
@@ -127,10 +122,6 @@
             background: #16a34a;
         }
 
-        .legend-yellow {
-            background: #facc15;
-        }
-
         .legend-red {
             background: #dc2626;
         }
@@ -152,45 +143,58 @@
         </p>
     </header>
 
-    <!-- STEP 1: Trial Questions -->
+    <!-- STEP 1: FORM -->
     <section class="mb-4">
         <div class="card card-elevated">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
-                        <div class="card-section-title">1 · Quick trial</div>
-                        <h5 class="mb-0">Tell us which medicines you've tried</h5>
+                        <div class="card-section-title">1 · Choose a combination</div>
+                        <h5 class="mb-0">Select your medicine and insurance plan</h5>
                     </div>
                 </div>
 
                 <p class="compare-hint mb-4">
-                    We'll ask a short series of yes/no questions. If you answer "No" for a medicine,
-                    we'll show options for that medicine (copays, estimated costs, and GoodRx cash price).
+                    Select both to see one detailed result, or leave one blank to compare all options
+                    for a single medicine or insurance.
                 </p>
 
-                <form method="POST" class="text-center">
-                    <!-- trial_index is the 0-based index into the trial sequence (Metformin, Glipizide, ...)
-                         trial_answer should be 'yes' or 'no' depending on the user's response. -->
-                    <input type="hidden" name="trial_index" id="trial_index" value="{{ trial_index or 0 }}">
-                    <!-- mark this form as the trial flow so server can distinguish it from other POSTs -->
-                    <input type="hidden" name="trial_action" value="trial">
-
-                    <div id="trial-card" class="py-4">
-                        {# Prefer an explicit trial_question set by server (after a Yes). Otherwise
-                           derive the current question from the trial_sequence and trial_index. #}
-                        {% set current_question = (
-                            trial_question if trial_question
-                            else (trial_sequence[trial_index] if (trial_sequence is defined and trial_index is not none and trial_index < (trial_sequence|length)) else 'Metformin')
-                        ) %}
-                        <p class="h5 mb-3">Have you tried <span class="text-primary">{{ current_question }}</span>?</p>
-
-                        <div class="d-flex justify-content-center gap-3">
-                            <button type="submit" name="trial_answer" value="yes" class="btn btn-outline-primary px-4">Yes</button>
-                            <button type="submit" name="trial_answer" value="no" class="btn btn-primary px-4">No</button>
+                <form method="POST">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label for="medicine" class="form-label fw-semibold">
+                                Medicine
+                            </label>
+                            <select id="medicine" name="medicine" class="form-select">
+                                <option value="">All medicines</option>
+                                {% for med in medicines %}
+                                    <option value="{{ med }}"
+                                        {% if selected_medicine == med %}selected{% endif %}>
+                                        {{ med }}
+                                    </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
-                        <div class="mt-3 small text-muted">
-                            <em>If you prefer, you can skip these questions and use the detailed view later.</em>
+                        <div class="col-md-5">
+                            <label for="insurance" class="form-label fw-semibold">
+                                Insurance
+                            </label>
+                            <select id="insurance" name="insurance" class="form-select">
+                                <option value="">All insurance plans</option>
+                                {% for ins in insurances %}
+                                    <option value="{{ ins }}"
+                                        {% if selected_insurance == ins %}selected{% endif %}>
+                                        {{ ins }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-2 d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                Compare
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -198,32 +202,40 @@
             </div>
         </div>
     </section>
-    
-    <!-- STEP 3: YOUR SELECTED COMBINATION (appears above options when 'View' clicked) -->
+
+    <!-- STEP 2: CURRENT SELECTION -->
     {% if current %}
     <section class="mb-4">
         <div class="card card-elevated">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
-                        <div class="card-section-title">3 · Your selected combination</div>
-                        <h5 class="mb-1">{{ current.medicine.medicine_name }} with {{ current.insurance.insurance_name }}</h5>
-                        {% if current.coverage %}
-                            {% if current.coverage.covered == 'Yes' %}
-                                <span class="coverage-chip coverage-yes mt-1">Covered · Tier {{ current.coverage.tier_level }}</span>
-                            {% elif current.coverage.covered %}
-                                <span class="coverage-chip coverage-partial mt-1">{{ current.coverage.covered }} · Tier {{ current.coverage.tier_level }}</span>
-                            {% else %}
-                                <span class="coverage-chip coverage-partial mt-1">Coverage details limited</span>
-                            {% endif %}
+                        <div class="card-section-title">2 · Your selected combination</div>
+                        <h5 class="mb-1">
+                            {{ current.medicine.medicine_name }} with {{ current.insurance.insurance_name }}
+                        </h5>
+                        {% if current.coverage and current.coverage.covered == 'Yes' %}
+                            <span class="coverage-chip coverage-yes mt-1">
+                                Covered · Tier {{ current.coverage.tier_level }}
+                            </span>
+                        {% elif current.coverage %}
+                            <span class="coverage-chip coverage-no mt-1">
+                                Not covered ({{ current.coverage.covered }})
+                            </span>
                         {% else %}
-                            <span class="coverage-chip coverage-no mt-1">No coverage info in our data</span>
+                            <span class="coverage-chip coverage-no mt-1">
+                                No coverage info in our data
+                            </span>
                         {% endif %}
                     </div>
                     <div class="text-end">
                         <div class="summary-label mb-1">Estimated annual</div>
-                        <div class="summary-number mb-0">${{ current.annual_cost|money }}</div>
-                        <div class="text-muted small">≈ ${{ current.monthly_cost|money }} / month</div>
+                        <div class="summary-number mb-0">
+                            ${{ current.annual_cost|money }}
+                        </div>
+                        <div class="text-muted small">
+                            ≈ ${{ current.monthly_cost|money }} / month
+                        </div>
                     </div>
                 </div>
 
@@ -254,25 +266,22 @@
     </section>
     {% endif %}
 
-    <!-- STEP 2: EXPLORE OPTIONS (pairings table) -->
+    <!-- STEP 3: TABLE OF PAIRINGS (ONLY WHEN THERE ARE RESULTS) -->
     {% if pairings %}
     <section class="mb-5">
         <div class="card card-elevated">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div>
-                        <div class="card-section-title mb-2">2 · Explore options</div>
+                        <div class="card-section-title mb-2">3 · Explore options</div>
                         <h5 class="mb-1">Other matching pairs</h5>
                         <p class="compare-hint mb-0">
-                            Showing {{ pairings|length }} option(s).
+                            Showing {{ pairings|length }} option(s) with coverage for this selection.
                         </p>
                     </div>
                     <div class="text-end small text-muted d-none d-md-block">
                         <div>
                             <span class="legend-dot legend-green"></span> Covered
-                        </div>
-                        <div>
-                            <span class="legend-dot legend-yellow"></span> Limited / special coverage
                         </div>
                         <div>
                             <span class="legend-dot legend-red"></span> No coverage
@@ -294,26 +303,14 @@
                         </thead>
                         <tbody>
                             {% for p in pairings %}
-                                <tr class="{% if p.coverage and p.coverage.covered == 'Yes' %}row-good-coverage{% elif not p.coverage %}row-no-coverage{% endif %}">
-                                    <td>
-                                        {{ p.medicine_name }}
-                                        {% if p.is_cash %}
-                                            <br /><small class="text-muted">GoodRx (cash)</small>
-                                        {% endif %}
-                                        {% if p.is_higher_tier %}
-                                            <div class="mt-1"><span class="badge bg-warning text-dark">Next tier</span></div>
-                                        {% endif %}
-                                    </td>
+                                <tr class="{% if p.coverage and p.coverage.covered == 'Yes' %}row-good-coverage{% elif not p.coverage or p.coverage.covered != 'Yes' %}row-no-coverage{% endif %}">
+                                    <td>{{ p.medicine_name }}</td>
                                     <td>{{ p.insurance_name }}</td>
                                     <td>
                                         {% if p.coverage and p.coverage.covered == 'Yes' %}
                                             <span class="coverage-chip coverage-yes">Covered</span>
-                                        {% elif p.coverage %}
-                                            <span class="coverage-chip coverage-partial">
-                                                {{ p.coverage.covered }}
-                                            </span>
                                         {% else %}
-                                            <span class="coverage-chip coverage-no">No coverage</span>
+                                            <span class="coverage-chip coverage-no">Not covered</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -344,8 +341,6 @@
                                         <form method="POST" class="d-inline">
                                             <input type="hidden" name="medicine" value="{{ p.medicine_name }}">
                                             <input type="hidden" name="insurance" value="{{ p.insurance_name }}">
-                                            <!-- preserve the trial index so non-trial POSTs don't reset the wizard -->
-                                            <input type="hidden" name="trial_index" value="{{ trial_index or 0 }}">
                                             <button class="btn btn-sm btn-outline-primary">
                                                 View
                                             </button>
@@ -363,65 +358,7 @@
                         <span class="legend-dot legend-green"></span> Covered
                     </div>
                     <div>
-                        <span class="legend-dot legend-yellow"></span> Limited / special coverage
-                    </div>
-                    <div>
                         <span class="legend-dot legend-red"></span> No coverage
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- STEP 3: YOUR SELECTED COMBINATION (appears above options when 'View' clicked) -->
-    {% if current %}
-    <section class="mb-4">
-        <div class="card card-elevated">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        <div class="card-section-title">3 · Your selected combination</div>
-                        <h5 class="mb-1">{{ current.medicine.medicine_name }} with {{ current.insurance.insurance_name }}</h5>
-                        {% if current.coverage %}
-                            {% if current.coverage.covered == 'Yes' %}
-                                <span class="coverage-chip coverage-yes mt-1">Covered · Tier {{ current.coverage.tier_level }}</span>
-                            {% elif current.coverage.covered %}
-                                <span class="coverage-chip coverage-partial mt-1">{{ current.coverage.covered }} · Tier {{ current.coverage.tier_level }}</span>
-                            {% else %}
-                                <span class="coverage-chip coverage-partial mt-1">Coverage details limited</span>
-                            {% endif %}
-                        {% else %}
-                            <span class="coverage-chip coverage-no mt-1">No coverage info in our data</span>
-                        {% endif %}
-                    </div>
-                    <div class="text-end">
-                        <div class="summary-label mb-1">Estimated annual</div>
-                        <div class="summary-number mb-0">${{ current.annual_cost|money }}</div>
-                        <div class="text-muted small">≈ ${{ current.monthly_cost|money }} / month</div>
-                    </div>
-                </div>
-
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h6 class="text-uppercase text-muted mb-2">Medicine details</h6>
-                        <div class="border rounded-3 p-3 bg-light">
-                            <p class="mb-1"><strong>Name:</strong> {{ current.medicine.medicine_name }}</p>
-                            <p class="mb-1"><strong>Type:</strong> {{ current.medicine.type }}</p>
-                            <p class="mb-1"><strong>Effectiveness:</strong> {{ current.medicine.effectiveness_rating }}/10</p>
-                            <p class="mb-0"><strong>Base monthly:</strong> ${{ current.medicine.average_cost_per_month|money }}</p>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <h6 class="text-uppercase text-muted mb-2">Insurance details</h6>
-                        <div class="border rounded-3 p-3 bg-light">
-                            <p class="mb-1"><strong>Plan:</strong> {{ current.insurance.insurance_name }}</p>
-                            <p class="mb-1"><strong>Provider:</strong> {{ current.insurance.provider }}</p>
-                            <p class="mb-1"><strong>Copay (primary care):</strong> ${{ current.insurance.copay_primary_care|money }}</p>
-                            <p class="mb-0"><strong>Deductible:</strong> ${{ current.insurance.deductible|money }}</p>
-                        </div>
                     </div>
                 </div>
 
@@ -465,7 +402,7 @@
                 coverageMap[selectedMed] &&
                 coverageMap[selectedMed][opt.value]) {
                 var covered = coverageMap[selectedMed][opt.value]["covered"];
-                label += covered === "Yes" ? " (Yes)" : " (" + covered + ")";
+                label += covered === "Yes" ? " (Yes)" : " (No)";
             }
             opt.text = label;
         }
@@ -482,7 +419,7 @@
                 coverageMap[opt.value] &&
                 coverageMap[opt.value][selectedIns]) {
                 var covered = coverageMap[opt.value][selectedIns]["covered"];
-                label += covered === "Yes" ? " (Yes)" : " (" + covered + ")";
+                label += covered === "Yes" ? " (Yes)" : " (No)";
             }
             opt.text = label;
         }
