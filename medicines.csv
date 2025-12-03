@@ -1,0 +1,8 @@
+medicine_name,type,effectiveness_rating,side_effects,average_cost_per_month,goodrx_price
+Metformin,Biguanide,9.0,Mild GI issues,15.00,20.84
+Glipizide,Sulfonylurea,8.5,Hypoglycemia risk,25.00,32.65
+Invokana,SGLT2 Inhibitor,8.1,Dehydration,40.00,350.00
+Januvia,DPP4 Inhibitor,7.9,Joint pain,45.00,558.80
+Tirzepatide,GLP-1/GIP agonist,9.2,Nausea and vomiting,90.00
+Semaglutide,GLP-1 agonist,9.3,Nausea,85.00
+Jardiance,SGLT2 Inhibitor,8.0,Increased urination,38.00,660.52.00

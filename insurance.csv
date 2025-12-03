@@ -1,0 +1,6 @@
+insurance_name,provider,copay_primary_care,copay_specialist,copay_emergency,deductible,annual_max_copay,coverage_percentage
+Blue Cross Blue Shield,BCBS,25.00,50.00,150.00,500.00,5000.00,80
+United Healthcare,UHC,20.00,45.00,100.00,750.00,6000.00,85
+Cigna,Cigna,25.00,55.00,150.00,600.00,5500.00,80
+Medicare Advantage,Medicare,0.00,35.00,250.00,0.00,6700.00,85
+Medicaid,Medicaid,3.00,3.00,3.00,0.00,3000.00,100

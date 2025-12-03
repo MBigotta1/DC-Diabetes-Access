@@ -1,0 +1,36 @@
+medicine_name,insurance_name,copay_amount,covered,tier_level
+Metformin,Cigna,5.00,Yes,Tier 1
+Metformin,Blue Cross Blue Shield,10.00,Yes,Tier 1
+Metformin,Medicaid,5.00,Yes,Tier 1
+Metformin,Medicare Advantage,5.00,Yes,Tier 1
+Metformin,United Healthcare,10.00,Yes,Tier 1
+
+Glipizide,Cigna,0.00,Yes,Tier 1
+Glipizide,Blue Cross Blue Shield,5.00,Yes,Tier 1
+Glipizide,Medicaid,0.00,Yes,Tier 1
+Glipizide,Medicare Advantage,0.00,Yes,Tier 1
+Glipizide,United Healthcare,25.00,Yes,Tier 1
+
+Invokana,Cigna,15.00,Yes,Tier 2
+Invokana,Cigna,811.00,No, Tier 2
+
+Januvia,Cigna,20.00,Yes,Tier 2
+Januvia,Cigna,721.00,No,Tier 2
+
+Tirzepatide,Cigna,200.00,Yes,Tier 3
+Tirzepatide,Medicaid,1000.00,Yes,Tier 3
+Tirzepatide,Medicare Advantage,1000.00,Yes,Tier 3
+Tirzepatide,United Healthcare,326.91,Yes,Tier 3
+
+Semaglutide,Cigna,200.00,Yes,Tier 3
+Semaglutide,Blue Cross Blue Shield,700.00,Yes,Tier 3
+Semaglutide,Medicaid,900.00,Yes,Tier 3
+Semaglutide,Medicare Advantage,900.00,Yes,Tier 3
+Semaglutide,United Healthcare,1418.00,Yes,Tier 3
+
+Jardiance,Cigna,55.00,Yes,Tier 4
+Jardiance,Blue Cross Blue Shield,115.00.00,Yes,Tier 4
+Jardiance,Medicaid,8.00,Yes,Tier 4
+Jardiance,Medicare Advantage,21.00,Yes,Tier 4
+Jardiance,United Healthcare,630.00,Yes,Tier 4
+Jardiance,United Healthcare,762.00,No,Tier 4
