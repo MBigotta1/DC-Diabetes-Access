@@ -164,8 +164,9 @@
                 </div>
 
                 <p class="compare-hint mb-4">
-                    Select both to see one detailed result, or leave one blank to compare all options
-                    for a single medicine or insurance.
+                    Select both to see one detailed result, or leave one blank to compare all options.
+                    When you choose a medicine or an insurance plan, the other dropdown will update to show
+                    which options have coverage in our data.
                 </p>
 
                 <form method="POST">
@@ -183,6 +184,7 @@
                                     </option>
                                 {% endfor %}
                             </select>
+                            <div class="small text-muted mt-1" id="medicineHelp"></div>
                         </div>
 
                         <div class="col-md-5">
@@ -198,6 +200,7 @@
                                     </option>
                                 {% endfor %}
                             </select>
+                            <div class="small text-muted mt-1" id="insuranceHelp"></div>
                         </div>
 
                         <div class="col-md-2 d-grid">
@@ -417,13 +420,13 @@
     </footer>
 </div>
 
-<!-- coverage map for JS dropdown annotations -->
+<!-- coverage map for JS dropdown behavior -->
 <script id="coverage-data" type="application/json">
     {{ coverage_map|safe }}
 </script>
 
 <script>
-    // --- coverage map for annotating dropdowns ---
+    // --- coverage map from backend: coverageMap[medicine][insurance] = { covered, copay_amount, tier_level } ---
     var coverageMap = {};
     (function () {
         try {
@@ -437,37 +440,121 @@
         }
     })();
 
-    function annotateInsuranceOptions(selectedMed) {
-        var insSelect = document.getElementById("insurance");
-        if (!insSelect) return;
-        for (var i = 0; i < insSelect.options.length; i++) {
-            var opt = insSelect.options[i];
-            if (!opt.value) continue;
-            var label = opt.value;
-            if (selectedMed &&
-                coverageMap[selectedMed] &&
-                coverageMap[selectedMed][opt.value]) {
-                var covered = coverageMap[selectedMed][opt.value]["covered"];
-                label += covered === "Yes" ? " (Yes)" : " (" + covered + ")";
+    // We'll store the full list of medicines and insurances (original dropdown contents)
+    var allMedicines = [];
+    var allInsurances = [];
+
+    function rebuildSelect(selectElem, items, placeholderText) {
+        if (!selectElem) return;
+        // Clear existing options
+        while (selectElem.options.length > 0) {
+            selectElem.remove(0);
+        }
+        // Add placeholder
+        var placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.text = placeholderText;
+        selectElem.appendChild(placeholder);
+
+        // Add items
+        items.forEach(function (item) {
+            var opt = document.createElement("option");
+            opt.value = item.value;
+            opt.text = item.text;
+            selectElem.appendChild(opt);
+        });
+    }
+
+    function getCoveredInsurancesForMedicine(medName) {
+        var result = [];
+        if (!medName || !coverageMap[medName]) return result;
+
+        var insCoverage = coverageMap[medName];
+        for (var insName in insCoverage) {
+            if (!insCoverage.hasOwnProperty(insName)) continue;
+            var cov = insCoverage[insName];
+            if (cov && cov.covered === "Yes") {
+                result.push(insName);
             }
-            opt.text = label;
+        }
+        return result;
+    }
+
+    function getCoveredMedicinesForInsurance(insName) {
+        var result = [];
+        if (!insName) return result;
+
+        for (var medName in coverageMap) {
+            if (!coverageMap.hasOwnProperty(medName)) continue;
+            var insCoverage = coverageMap[medName];
+            if (insCoverage && insCoverage[insName] && insCoverage[insName].covered === "Yes") {
+                result.push(medName);
+            }
+        }
+        return result;
+    }
+
+    function filterInsurancesForMedicine(selectedMed) {
+        var insSelect = document.getElementById("insurance");
+        var helpText = document.getElementById("insuranceHelp");
+        if (!insSelect) return;
+
+        if (!selectedMed) {
+            // reset to full list
+            rebuildSelect(insSelect, allInsurances, "All insurance plans");
+            if (helpText) helpText.textContent = "";
+            return;
+        }
+
+        var coveredIns = getCoveredInsurancesForMedicine(selectedMed);
+
+        if (coveredIns.length === 0) {
+            // no coverage found for this medicine in our data
+            rebuildSelect(insSelect, [], "All insurance plans");
+            if (helpText) helpText.textContent = "No insurance coverage found for this medicine in our data.";
+            return;
+        }
+
+        // Build filtered list from allInsurances
+        var filtered = allInsurances.filter(function (item) {
+            return coveredIns.indexOf(item.value) !== -1;
+        });
+
+        rebuildSelect(insSelect, filtered, "Insurance with coverage for this medicine");
+
+        if (helpText) {
+            helpText.textContent = "Showing only insurance plans that cover " + selectedMed + " in our data.";
         }
     }
 
-    function annotateMedicineOptions(selectedIns) {
+    function filterMedicinesForInsurance(selectedIns) {
         var medSelect = document.getElementById("medicine");
+        var helpText = document.getElementById("medicineHelp");
         if (!medSelect) return;
-        for (var i = 0; i < medSelect.options.length; i++) {
-            var opt = medSelect.options[i];
-            if (!opt.value) continue;
-            var label = opt.value;
-            if (selectedIns &&
-                coverageMap[opt.value] &&
-                coverageMap[opt.value][selectedIns]) {
-                var covered = coverageMap[opt.value][selectedIns]["covered"];
-                label += covered === "Yes" ? " (Yes)" : " (" + covered + ")";
-            }
-            opt.text = label;
+
+        if (!selectedIns) {
+            // reset to full list
+            rebuildSelect(medSelect, allMedicines, "All medicines");
+            if (helpText) helpText.textContent = "";
+            return;
+        }
+
+        var coveredMeds = getCoveredMedicinesForInsurance(selectedIns);
+
+        if (coveredMeds.length === 0) {
+            rebuildSelect(medSelect, [], "All medicines");
+            if (helpText) helpText.textContent = "No medicines with coverage found for this insurance in our data.";
+            return;
+        }
+
+        var filtered = allMedicines.filter(function (item) {
+            return coveredMeds.indexOf(item.value) !== -1;
+        });
+
+        rebuildSelect(medSelect, filtered, "Medicines covered by this insurance");
+
+        if (helpText) {
+            helpText.textContent = "Showing only medicines that are covered by " + selectedIns + " in our data.";
         }
     }
 
@@ -509,21 +596,56 @@
         var metricSelect = document.getElementById("sortMetric");
         var orderSelect = document.getElementById("sortOrder");
 
-        if (medSelect && medSelect.value) annotateInsuranceOptions(medSelect.value);
-        if (insSelect && insSelect.value) annotateMedicineOptions(insSelect.value);
+        // capture original options (excluding the first placeholder)
+        if (medSelect) {
+            for (var i = 0; i < medSelect.options.length; i++) {
+                var opt = medSelect.options[i];
+                if (!opt.value) continue; // skip "All medicines"
+                allMedicines.push({ value: opt.value, text: opt.text });
+            }
+        }
 
+        if (insSelect) {
+            for (var j = 0; j < insSelect.options.length; j++) {
+                var opt2 = insSelect.options[j];
+                if (!opt2.value) continue; // skip "All insurance plans"
+                allInsurances.push({ value: opt2.value, text: opt2.text });
+            }
+        }
+
+        // Wire up dropdown change events
         if (medSelect) {
             medSelect.addEventListener("change", function () {
-                annotateInsuranceOptions(this.value);
+                var selectedMed = this.value;
+                filterInsurancesForMedicine(selectedMed);
             });
         }
 
         if (insSelect) {
             insSelect.addEventListener("change", function () {
-                annotateMedicineOptions(this.value);
+                var selectedIns = this.value;
+                filterMedicinesForInsurance(selectedIns);
             });
         }
 
+        // If the page loads with one already selected (after POST),
+        // re-apply filters so the dropdowns match the current state.
+        if (medSelect && medSelect.value) {
+            filterInsurancesForMedicine(medSelect.value);
+            // and re-select the insurance if it was already chosen
+            if (insSelect && insSelect.value) {
+                insSelect.value = insSelect.value;
+            }
+        }
+
+        if (insSelect && insSelect.value) {
+            filterMedicinesForInsurance(insSelect.value);
+            if (medSelect && medSelect.value) {
+                medSelect.value = medSelect.value;
+            }
+        }
+
+        // Sorting controls
         if (metricSelect) {
             metricSelect.addEventListener("change", sortPairingsTable);
         }
