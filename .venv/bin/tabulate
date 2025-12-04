@@ -1,9 +1,0 @@
-#!/bin/sh
-'''exec' "/Users/matthewbigotta/Library/CloudStorage/OneDrive-GallaudetUniversity/Fall 2025/STM 403 - Senior Capstone/DC Diabetes Access Code/.venv/bin/python" "$0" "$@"
-' '''
-import sys
-from tabulate import _main
-if __name__ == '__main__':
-    if sys.argv[0].endswith('.exe'):
-        sys.argv[0] = sys.argv[0][:-4]
-    sys.exit(_main())
