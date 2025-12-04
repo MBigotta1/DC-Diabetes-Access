@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from dc_access import DiabetesCostComparator
 import pandas as pd
 import math
@@ -146,19 +146,39 @@ def build_coverage_map():
     """Return nested dict: coverage_map[medicine_name][insurance_name] = coverage dict or None."""
     coverage_map = {}
     for _, row in comparator.coverage_df.iterrows():
-        med = row["medicine_name"]
-        ins = row["insurance_name"]
+        med = row["medicine_name"].strip() if isinstance(row["medicine_name"], str) else row["medicine_name"]
+        ins = row["insurance_name"].strip() if isinstance(row["insurance_name"], str) else row["insurance_name"]
+        covered_val = row.get("covered")
+        if isinstance(covered_val, str):
+            covered_val = covered_val.strip()
+        
+        copay = row.get("copay_amount")
+        # Replace NaN with None so JSON serialization works
+        try:
+            if pd.isna(copay):
+                copay = None
+        except:
+            pass
+        
         coverage_map.setdefault(med, {})[ins] = {
-            "covered": row.get("covered"),
-            "copay_amount": row.get("copay_amount"),
+            "covered": covered_val,
+            "copay_amount": copay,
             "tier_level": row.get("tier_level"),
         }
+    print(f"DEBUG: Loaded {len(coverage_map)} medicines with {sum(len(v) for v in coverage_map.values())} total med+ins pairs")
     return coverage_map
 
 
 @app.template_filter("money")
 def money_filter(value):
     return format_money(value)
+
+
+@app.route("/debug/coverage", methods=["GET"])
+def debug_coverage():
+    """Debug endpoint to see coverage map."""
+    cov_map = build_coverage_map()
+    return jsonify(cov_map)
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -408,4 +428,4 @@ def index():
 
 if __name__ == "__main__":
     # this only runs on your own computer (localhost)
-    app.run(debug=True)
+    app.run(debug=True, host="127.0.0.1", port=5000)

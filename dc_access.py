@@ -63,47 +63,103 @@ class DiabetesCostComparator:
         print("DIABETES MEDICINE & INSURANCE COMPARISON TOOL")
         print("=" * 60)
         print()
-        
-        # Get medicine selection
-        print("Available Diabetes Medicines:")
-        print("-" * 60)
-        medicines = self.medicines_df['medicine_name'].unique().tolist()
-        for i, med in enumerate(medicines, 1):
-            print(f"{i}. {med}")
-        print()
-        
+
+        # Let user choose whether to pick medicine first or insurance first
         while True:
-            try:
-                med_choice = int(input("Enter the number of your current medicine: "))
-                if 1 <= med_choice <= len(medicines):
-                    selected_medicine = medicines[med_choice - 1]
-                    break
-                else:
-                    print("Invalid choice. Please enter a valid number.")
-            except ValueError:
-                print("Invalid input. Please enter a number.")
-        
-        print()
-        
-        # Get insurance selection
-        print("Available Insurance Plans:")
-        print("-" * 60)
-        insurances = self.insurance_df['insurance_name'].unique().tolist()
-        for i, ins in enumerate(insurances, 1):
-            print(f"{i}. {ins}")
-        print()
-        
-        while True:
-            try:
-                ins_choice = int(input("Enter the number of your insurance plan: "))
-                if 1 <= ins_choice <= len(insurances):
-                    selected_insurance = insurances[ins_choice - 1]
-                    break
-                else:
-                    print("Invalid choice. Please enter a valid number.")
-            except ValueError:
-                print("Invalid input. Please enter a number.")
-        
+            order_choice = input("Choose selection order: 1) Medicine first  2) Insurance first (enter 1 or 2): ").strip()
+            if order_choice in ("1", "2"):
+                break
+            print("Invalid choice. Please enter 1 or 2.")
+
+        selected_medicine = None
+        selected_insurance = None
+
+        if order_choice == "1":
+            # Medicine first
+            print("Available Diabetes Medicines:")
+            print("-" * 60)
+            medicines = self.medicines_df['medicine_name'].unique().tolist()
+            for i, med in enumerate(medicines, 1):
+                print(f"{i}. {med}")
+            print()
+
+            while True:
+                try:
+                    med_choice = int(input("Enter the number of your current medicine: "))
+                    if 1 <= med_choice <= len(medicines):
+                        selected_medicine = medicines[med_choice - 1]
+                        break
+                    else:
+                        print("Invalid choice. Please enter a valid number.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+
+            print()
+
+            # Show insurances annotated with coverage for the selected medicine
+            print("Available Insurance Plans (shows if they cover the selected medicine):")
+            print("-" * 60)
+            insurances = self.insurance_df['insurance_name'].unique().tolist()
+            for i, ins in enumerate(insurances, 1):
+                cov = self.get_coverage_info(ins, selected_medicine)
+                covered = "Yes" if cov and cov.get('covered') == 'Yes' else "No"
+                print(f"{i}. {ins}  (Covers: {covered})")
+            print()
+
+            while True:
+                try:
+                    ins_choice = int(input("Enter the number of your insurance plan: "))
+                    if 1 <= ins_choice <= len(insurances):
+                        selected_insurance = insurances[ins_choice - 1]
+                        break
+                    else:
+                        print("Invalid choice. Please enter a valid number.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+
+        else:
+            # Insurance first
+            print("Available Insurance Plans:")
+            print("-" * 60)
+            insurances = self.insurance_df['insurance_name'].unique().tolist()
+            for i, ins in enumerate(insurances, 1):
+                print(f"{i}. {ins}")
+            print()
+
+            while True:
+                try:
+                    ins_choice = int(input("Enter the number of your insurance plan: "))
+                    if 1 <= ins_choice <= len(insurances):
+                        selected_insurance = insurances[ins_choice - 1]
+                        break
+                    else:
+                        print("Invalid choice. Please enter a valid number.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+
+            print()
+
+            # Show medicines annotated with coverage for the selected insurance
+            print("Available Diabetes Medicines (shows if selected insurance covers them):")
+            print("-" * 60)
+            medicines = self.medicines_df['medicine_name'].unique().tolist()
+            for i, med in enumerate(medicines, 1):
+                cov = self.get_coverage_info(selected_insurance, med)
+                covered = "Yes" if cov and cov.get('covered') == 'Yes' else "No"
+                print(f"{i}. {med}  (Covered: {covered})")
+            print()
+
+            while True:
+                try:
+                    med_choice = int(input("Enter the number of your current medicine: "))
+                    if 1 <= med_choice <= len(medicines):
+                        selected_medicine = medicines[med_choice - 1]
+                        break
+                    else:
+                        print("Invalid choice. Please enter a valid number.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+
         return selected_medicine, selected_insurance
     
     def get_medicine_info(self, medicine_name: str) -> Dict:

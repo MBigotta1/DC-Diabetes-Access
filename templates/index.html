@@ -166,10 +166,10 @@
                 <p class="compare-hint mb-4">
                     Select both to see one detailed result, or leave one blank to compare all options.
                     When you choose a medicine or an insurance plan, the other dropdown will show
-                    <strong>(Yes)</strong> or <strong>(No)</strong> to indicate coverage in our data.
+                    <strong>(Covered)</strong> or <strong>(Not Covered)</strong> to indicate coverage in our data.
                 </p>
 
-                <form method="POST">
+                <form method="POST" id="comparisonForm">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-5">
                             <label for="medicine" class="form-label fw-semibold">
@@ -434,6 +434,8 @@
             if (!el) return;
             var txt = el.textContent || el.innerText || "";
             coverageMap = txt ? JSON.parse(txt) : {};
+            console.log("Coverage map loaded:", Object.keys(coverageMap).length, "medicines");
+            console.log("Sample:", Object.keys(coverageMap).slice(0, 2).map(m => m + ": " + Object.keys(coverageMap[m]).length + " insurances"));
         } catch (e) {
             console.warn("Failed to parse coverage map JSON", e);
             coverageMap = {};
@@ -462,24 +464,46 @@
 
         if (!selectedMed) return;
 
+        console.log("DEBUG: Annotating insurance for medicine:", selectedMed);
+        console.log("DEBUG: coverageMap keys:", Object.keys(coverageMap));
+        console.log("DEBUG: coverageMap[selectedMed]:", coverageMap[selectedMed]);
+
         for (var i = 0; i < insSelect.options.length; i++) {
             var opt = insSelect.options[i];
             if (!opt.value) continue; // skip "All insurance plans"
             var base = opt.getAttribute("data-base-label") || opt.value;
 
-            var yes = false;
+            console.log("DEBUG: Checking option value:", opt.value, "base:", base);
+
+            var suffix = '';
             if (coverageMap[selectedMed] && coverageMap[selectedMed][opt.value]) {
                 var cov = coverageMap[selectedMed][opt.value];
-                if (cov && cov.covered === "Yes") {
-                    yes = true;
+                console.log("DEBUG: Found coverage:", cov);
+                if (cov && cov.covered != null) {
+                    var c = cov.covered;
+                    console.log("DEBUG: covered value:", c, "type:", typeof c);
+                    if (typeof c === 'string') c = c.trim().toLowerCase();
+                    if (c === true || c === 'yes' || c === 'y') {
+                        suffix = ' (Covered)';
+                    } else if (c === false || c === 'no' || c === 'n') {
+                        suffix = ' (Not Covered)';
+                    } else {
+                        suffix = ' (Limited)';
+                    }
+                } else {
+                    suffix = ' (Limited)';
                 }
+            } else {
+                suffix = ' (Not Covered)';
+                console.log("DEBUG: No coverage found for", selectedMed, "+", opt.value);
             }
-            opt.textContent = base + (yes ? " (Yes)" : " (No)");
+            console.log("DEBUG: Setting", opt.value, "suffix:", suffix);
+            opt.textContent = base + suffix;
         }
 
         if (help) {
             help.textContent =
-                "Each insurance now shows (Yes) or (No) based on coverage for " +
+                "Each insurance now shows (Covered) or (Not Covered) based on coverage for " +
                 selectedMed + " in our data.";
         }
     }
@@ -499,19 +523,31 @@
             if (!opt.value) continue; // skip "All medicines"
             var base = opt.getAttribute("data-base-label") || opt.value;
 
-            var yes = false;
+            var suffix = '';
             if (coverageMap[opt.value] && coverageMap[opt.value][selectedIns]) {
                 var cov = coverageMap[opt.value][selectedIns];
-                if (cov && cov.covered === "Yes") {
-                    yes = true;
+                if (cov && cov.covered != null) {
+                    var c = cov.covered;
+                    if (typeof c === 'string') c = c.trim().toLowerCase();
+                    if (c === true || c === 'yes' || c === 'y') {
+                        suffix = ' (Covered)';
+                    } else if (c === false || c === 'no' || c === 'n') {
+                        suffix = ' (Not Covered)';
+                    } else {
+                        suffix = ' (Limited)';
+                    }
+                } else {
+                    suffix = ' (Limited)';
                 }
+            } else {
+                suffix = ' (Not Covered)';
             }
-            opt.textContent = base + (yes ? " (Yes)" : " (No)");
+            opt.textContent = base + suffix;
         }
 
         if (help) {
             help.textContent =
-                "Each medicine now shows (Yes) or (No) based on coverage under " +
+                "Each medicine now shows (Covered) or (Not Covered) based on coverage under " +
                 selectedIns + " in our data.";
         }
     }
@@ -553,23 +589,53 @@
         var metricSelect = document.getElementById("sortMetric");
         var orderSelect = document.getElementById("sortOrder");
 
+        console.log("DOMContentLoaded fired");
+        console.log("medSelect:", medSelect);
+        console.log("insSelect:", insSelect);
+        console.log("coverageMap:", coverageMap);
+        
+        // DEBUG: Log all option values
+        if (insSelect) {
+            console.log("Insurance option values:");
+            for (var i = 0; i < insSelect.options.length; i++) {
+                console.log("  [" + i + "] value='" + insSelect.options[i].value + "' text='" + insSelect.options[i].text + "'");
+            }
+        }
         if (medSelect) {
+            console.log("Medicine option values:");
+            for (var i = 0; i < medSelect.options.length; i++) {
+                console.log("  [" + i + "] value='" + medSelect.options[i].value + "' text='" + medSelect.options[i].text + "'");
+            }
+        }
+        console.log("Coverage map insurance keys for Metformin:", Object.keys(coverageMap["Metformin"] || {}));
+
+        if (medSelect) {
+            console.log("Attaching medicine change listener");
             medSelect.addEventListener("change", function () {
+                console.log("Medicine changed to:", this.value);
                 annotateInsuranceForMedicine(this.value);
+                // Optionally auto-submit form after annotation
+                // document.getElementById("comparisonForm").submit();
             });
         }
 
         if (insSelect) {
+            console.log("Attaching insurance change listener");
             insSelect.addEventListener("change", function () {
+                console.log("Insurance changed to:", this.value);
                 annotateMedicineForInsurance(this.value);
+                // Optionally auto-submit form after annotation
+                // document.getElementById("comparisonForm").submit();
             });
         }
 
         // If page loaded with selections, re-annotate dropdowns
         if (medSelect && medSelect.value) {
+            console.log("Page loaded with medicine:", medSelect.value);
             annotateInsuranceForMedicine(medSelect.value);
         }
         if (insSelect && insSelect.value) {
+            console.log("Page loaded with insurance:", insSelect.value);
             annotateMedicineForInsurance(insSelect.value);
         }
 
